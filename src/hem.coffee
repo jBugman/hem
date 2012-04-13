@@ -22,96 +22,96 @@ help = ->
   process.exit()
 
 class Hem
-  @exec: (command, options) ->
-    (new @(options)).exec(command)
+	@exec: (command, options) ->
+		(new @(options)).exec(command)
 
-  @include: (props) ->
-    @::[key] = value for key, value of props
+	@include: (props) ->
+		@::[key] = value for key, value of props
 
-  compilers: compilers
+	compilers: compilers
 
-  options:
-    slug:         './slug.json'
-    css:          './css'
-    libs:         []
-    public:       './public'
-    paths:        ['./app']
-    dependencies: []
-    port:         process.env.PORT or argv.port or 9294
-    cssPath:      '/application.css'
-    jsPath:       '/application.js'
+	options:
+		slug:         './slug.json'
+		css:          './css'
+		libs:         []
+		public:       './public'
+		paths:        ['./app']
+		dependencies: []
+		port:         process.env.PORT or argv.port or 9294
+		cssPath:      '/application.css'
+		jsPath:       '/application.js'
 
-    test:         './test'
-    testPublic:   './test/public'
-    testPath:     '/test'
-    specs:        './test/specs'
-    specsPath:    '/test/specs.js'
+		test:         './test'
+		testPublic:   './test/public'
+		testPath:     '/test'
+		specs:        './test/specs'
+		specsPath:    '/test/specs.js'
 
-  constructor: (options = {}) ->
-    @options[key] = value for key, value of options
-    @options[key] = value for key, value of @readSlug()
+	constructor: (options = {}) ->
+		@options[key] = value for key, value of options
+		@options[key] = value for key, value of @readSlug()
 
-    @app = new strata.Builder
+		@app = new strata.Builder
 
-  server: ->
-    @app.use(strata.contentLength)
+	server: ->
+		@app.use(strata.contentLength)
 
-    @app.get(@options.cssPath, @cssPackage().createServer())
-    @app.get(@options.jsPath, @hemPackage().createServer())
+		@app.get(@options.cssPath, @cssPackage().createServer())
+		@app.get(@options.jsPath, @hemPackage().createServer())
 
-    if path.existsSync(@options.specs)
-      @app.get(@options.specsPath, @specsPackage().createServer())
+		if path.existsSync(@options.specs)
+			@app.get(@options.specsPath, @specsPackage().createServer())
 
-    if path.existsSync(@options.testPublic)
-      @app.map @options.testPath, (app) =>
-        app.use(strata.static, @options.testPublic, ['index.html', 'index.htm'])
+		if path.existsSync(@options.testPublic)
+			@app.map @options.testPath, (app) =>
+				app.use(strata.static, @options.testPublic, ['index.html', 'index.htm'])
 
-    if path.existsSync(@options.public)
-      @app.use(strata.static, @options.public, ['index.html', 'index.htm'])
+		if path.existsSync(@options.public)
+			@app.use(strata.static, @options.public, ['index.html', 'index.htm'])
 
-    strata.run(@app, port: @options.port)
+		strata.run(@app, port: @options.port)
 
-  build: ->
-    source = @hemPackage().compile(not argv.debug)
-    fs.writeFileSync(path.join(@options.public, @options.jsPath), source)
+	build: ->
+		source = @hemPackage().compile(not argv.debug)
+		fs.writeFileSync(path.join(@options.public, @options.jsPath), source)
 
-    source = @cssPackage().compile()
-    fs.writeFileSync(path.join(@options.public, @options.cssPath), source)
+		source = @cssPackage().compile()
+		fs.writeFileSync(path.join(@options.public, @options.cssPath), source)
 
-  watch: ->
-    @build()
-    for dir in (path.dirname(lib) for lib in @options.libs).concat @options.css, @options.paths
-      continue unless path.existsSync(dir)
-      require('watch').watchTree dir, {ignoreDotFiles: true}, (file, curr, prev) =>
-        if typeof(file) == 'string' and path.basename(file)[0] != '.'
-            if curr and (curr.nlink is 0 or +curr.mtime isnt +prev?.mtime)
-              console.log "#{file} changed.  Rebuilding."
-              @build()
+	watch: ->
+		@build()
+		for dir in (path.dirname(lib) for lib in @options.libs).concat path.dirname(@options.css), @options.paths
+			continue unless path.existsSync(dir)
+			require('watch').watchTree dir, {ignoreDotFiles: true}, (file, curr, prev) =>
+				if typeof(file) == 'string' and path.basename(file)[0] != '.'
+					if curr and (curr.nlink is 0 or +curr.mtime isnt +prev?.mtime)
+						console.log "#{file} changed.  Rebuilding."
+						@build()
 
-  exec: (command = argv._[0]) ->
-    return help() unless @[command]
-    @[command]()
-    switch command
-      when 'build'  then console.log 'Built application'
-      when 'watch'  then console.log 'Watching application'
+	exec: (command = argv._[0]) ->
+		return help() unless @[command]
+		@[command]()
+		switch command
+			when 'build'  then console.log 'Built application'
+			when 'watch'  then console.log 'Watching application'
 
-  # Private
+# Private
 
-  readSlug: (slug = @options.slug) ->
-    return {} unless slug and path.existsSync(slug)
-    JSON.parse(fs.readFileSync(slug, 'utf-8'))
+	readSlug: (slug = @options.slug) ->
+		return {} unless slug and path.existsSync(slug)
+		JSON.parse(fs.readFileSync(slug, 'utf-8'))
 
-  cssPackage: ->
-    css.createPackage(@options.css)
+	cssPackage: ->
+		css.createPackage(@options.css)
 
-  hemPackage: ->
-    package.createPackage(
-      dependencies: @options.dependencies
-      paths: @options.paths
-      libs: @options.libs
-    )
+	hemPackage: ->
+		package.createPackage(
+			dependencies: @options.dependencies
+			paths: @options.paths
+			libs: @options.libs
+		)
 
-  specsPackage: ->
-    specs.createPackage(@options.specs)
+	specsPackage: ->
+		specs.createPackage(@options.specs)
 
 module.exports = Hem
