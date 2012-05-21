@@ -73,10 +73,13 @@ class Hem
 
 	build: ->
 		source = @hemPackage().compile(not argv.debug)
+		if @options.autorun
+			source += "\n$(function(){require('index');});"
 		fs.writeFileSync(path.join(@options.public, @options.jsPath), source)
 
-		source = @cssPackage().compile()
-		fs.writeFileSync(path.join(@options.public, @options.cssPath), source)
+		if not @options.noCss
+			source = @cssPackage().compile()
+			fs.writeFileSync(path.join(@options.public, @options.cssPath), source)
 
 	watch: ->
 		@build()
